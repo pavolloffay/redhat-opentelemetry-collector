@@ -4,9 +4,12 @@ FROM registry.redhat.io/openshift/golang-builder:golang-builder-v1.26-rhel9 AS b
 WORKDIR /opt/app-root/src
 USER root
 
-RUN dnf -y install clang llvm && \
+# The golang-builder image already ships clang and llvm. Install them only when they are missing, so that the
+# Dockerfile also builds where the image has no RHEL repositories, e.g. in OpenShift CI.
+RUN (command -v clang >/dev/null 2>&1 && command -v llvm-strip >/dev/null 2>&1) || \
+    (dnf -y install clang llvm && \
     dnf clean all && \
-    rm -rf /var/cache/yum
+    rm -rf /var/cache/yum)
 
 COPY .obi-src .obi-src
 RUN GOFLAGS=-mod=mod make -C .obi-src generate
