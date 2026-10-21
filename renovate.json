@@ -11,6 +11,7 @@
       "matchManagers": ["gomod"],
       "matchDepNames": [
         "go.opentelemetry.io/collector{/,}**",
+        "go.opentelemetry.io/otel{/,}**",
         "github.com/open-telemetry/opentelemetry-collector-contrib{/,}**"
       ],
       "enabled": false
