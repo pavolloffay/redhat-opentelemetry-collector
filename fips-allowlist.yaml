@@ -1,0 +1,347 @@
+# Verified FIPS allowlist for the Red Hat OpenTelemetry Collector.
+# Each entry documents a non-FIPS crypto import chain that has been reviewed
+# and determined acceptable for our FIPS deployment.
+# The chain is the exact import path from the root module package to the direct importer.
+# If a new code path imports the same crypto package, it must be verified and added here.
+
+allow:
+  # --- OIDC auth extension: go-jose JOSE/JWE ---
+  # The OIDC auth extension uses go-jose for JWT token validation.
+  # go-jose's JWE key derivation uses x/crypto/pbkdf2 which delegates to FIPS since Go 1.24.
+  # The non-delegating JWE encryption paths (PBES2) are not exercised when only verifying OIDC tokens.
+  - package: github.com/go-jose/go-jose/v4
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/extension/oidcauthextension
+      - github.com/coreos/go-oidc/v3/oidc
+    reason: OIDC token verification via go-oidc, does not exercise non-FIPS JWE paths
+
+  - package: github.com/go-jose/go-jose/v4
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/extension/oidcauthextension
+    reason: OIDC auth extension imports go-jose for JWT parsing, FIPS-incompatible paths not used
+
+  # --- Kafka exporter: Kerberos authentication (aescts) ---
+  # Kerberos SASL authentication for Kafka uses AES-CTS mode via jcmturner libraries.
+  # This is the standard Kerberos cipher suite; when Kafka Kerberos is not configured, this code is not exercised.
+  - package: github.com/jcmturner/aescts/v2
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc3962
+    reason: Kerberos AES-CTS for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/aescts/v2
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc8009
+    reason: Kerberos AES-CTS for Kafka SASL, not exercised without Kerberos config
+
+  # --- Kafka exporter: Kerberos authentication (gofork) ---
+  # jcmturner/gofork provides forked crypto utilities for Kerberos ASN.1/encoding support.
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/types
+      - github.com/jcmturner/gokrb5/v8/asn1tools
+    reason: Kerberos ASN.1 utils for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/config
+    reason: Kerberos config parsing for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/credentials
+    reason: Kerberos credentials for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc3962
+    reason: Kerberos crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/twmb/franz-go/pkg/sasl/kerberos
+      - github.com/jcmturner/gokrb5/v8/gssapi
+    reason: Kerberos GSS-API for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/kadmin
+    reason: Kerberos admin for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/messages
+    reason: Kerberos messages for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gofork
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/types
+    reason: Kerberos types for Kafka SASL, not exercised without Kerberos config
+
+  # --- Kafka exporter: Kerberos authentication (gokrb5) ---
+  # Full Kerberos v5 implementation used by the Kafka client for SASL/GSSAPI authentication.
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+    reason: Kerberos client for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/config
+    reason: Kerberos config for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/credentials
+    reason: Kerberos credentials for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+    reason: Kerberos crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/common
+    reason: Kerberos crypto commons for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc3961
+    reason: Kerberos RFC3961 crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc3962
+    reason: Kerberos RFC3962 crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc4757
+    reason: Kerberos RFC4757 crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/crypto
+      - github.com/jcmturner/gokrb5/v8/crypto/rfc8009
+    reason: Kerberos RFC8009 crypto for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/twmb/franz-go/pkg/sasl/kerberos
+      - github.com/jcmturner/gokrb5/v8/gssapi
+    reason: Kerberos GSS-API for Kafka SASL via franz-go, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/kadmin
+    reason: Kerberos admin for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+    reason: Kerberos keytab for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/messages
+    reason: Kerberos messages for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/client
+      - github.com/jcmturner/gokrb5/v8/messages
+      - github.com/jcmturner/gokrb5/v8/pac
+    reason: Kerberos PAC for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/jcmturner/gokrb5/v8/keytab
+      - github.com/jcmturner/gokrb5/v8/types
+    reason: Kerberos types for Kafka SASL, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+    reason: Kafka internal Kerberos support, not exercised without Kerberos config
+
+  - package: github.com/jcmturner/gokrb5/v8
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/kafkaexporter
+      - github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka
+      - github.com/twmb/franz-go/pkg/sasl/kerberos
+    reason: Franz-go Kerberos SASL for Kafka, not exercised without Kerberos config
+
+  # --- Prometheus receiver: bcrypt/blowfish ---
+  # The Prometheus exporter-toolkit uses bcrypt for HTTP basic auth password hashing.
+  # This is only exercised when basic auth is configured on the Prometheus scrape target,
+  # which is not a FIPS-sensitive operation (password verification, not key derivation).
+  - package: golang.org/x/crypto/bcrypt
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver
+      - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver
+      - github.com/prometheus/exporter-toolkit/web
+    reason: Prometheus exporter-toolkit HTTP basic auth, not used in FIPS deployment
+
+  - package: golang.org/x/crypto/blowfish
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver
+      - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/apiserver
+      - github.com/prometheus/exporter-toolkit/web
+      - golang.org/x/crypto/bcrypt
+    reason: internal dependency of bcrypt in prometheus exporter-toolkit
+
+  # --- TLS config: chacha20/chacha20poly1305 via TPM keyfiles ---
+  # The collector's configtls uses go-tpm-keyfiles for TPM-backed TLS keys.
+  # go-tpm-keyfiles uses chacha20poly1305 for PEM encryption, not for TLS cipher suites.
+  # When FIPS is enabled, the TLS stack uses only FIPS-approved cipher suites.
+  - package: golang.org/x/crypto/chacha20
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/extension/oauth2clientauthextension
+      - go.opentelemetry.io/collector/config/configtls
+      - github.com/foxboron/go-tpm-keyfiles
+      - golang.org/x/crypto/chacha20poly1305
+    reason: internal dependency of chacha20poly1305 in TPM keyfiles, not used for TLS cipher suites
+
+  - package: golang.org/x/crypto/chacha20poly1305
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/extension/oauth2clientauthextension
+      - go.opentelemetry.io/collector/config/configtls
+      - github.com/foxboron/go-tpm-keyfiles
+    reason: TPM PEM key encryption via go-tpm-keyfiles, not used for TLS cipher suites
+
+  # --- Google Cloud exporter: chacha20poly1305 via S2A ---
+  # Google S2A uses chacha20poly1305 as fallback AEAD cipher.
+  # When FIPS is enabled, S2A negotiates AES-GCM instead.
+  - package: golang.org/x/crypto/chacha20poly1305
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/exporter/googlecloudexporter
+      - github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/collector
+      - google.golang.org/api/option
+      - google.golang.org/api/internal
+      - github.com/google/s2a-go
+      - github.com/google/s2a-go/internal/handshaker
+      - github.com/google/s2a-go/internal/record
+      - github.com/google/s2a-go/internal/record/internal/halfconn
+      - github.com/google/s2a-go/internal/record/internal/aeadcrypter
+    reason: Google S2A fallback cipher, AES-GCM is used when FIPS is enabled
+
+  # --- Prometheus receiver: pkcs12 via Azure SDK ---
+  # Azure SDK uses pkcs12 for certificate-based authentication.
+  # This auth method is not used in our FIPS deployment.
+  - package: golang.org/x/crypto/pkcs12
+    chain:
+      - github.com/openshift/redhat-opentelemetry-collector
+      - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver
+      - github.com/prometheus/prometheus/config
+      - github.com/prometheus/prometheus/storage/remote/azuread
+      - github.com/Azure/azure-sdk-for-go/sdk/azidentity
+    reason: Azure certificate auth, not used in our FIPS deployment
