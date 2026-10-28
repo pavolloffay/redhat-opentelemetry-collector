@@ -10,7 +10,7 @@ MAKEFLAGS += --silent
 
 build: ocb generate-obi
 	mkdir -p _build
-	DIST_GO=${GO} ${OTELCOL_BUILDER} --skip-compilation=false --config manifest.yaml 2>&1 | tee _build/build.log
+	GOFIPS140=certified DIST_GO=${GO} ${OTELCOL_BUILDER} --skip-compilation=false --ldflags "-w" --config manifest.yaml 2>&1 | tee _build/build.log
 
 build-in-podman:
 	podman run -v "$$PWD:/app:z" -w /app --security-opt label=disable registry.access.redhat.com/ubi9/ubi-minimal \
@@ -104,6 +104,10 @@ packit/srpm:
 .PHONY: packit/srpm
 packit/rpm/mock:
 	packit build in-mock
+
+.PHONY: fips-check
+fips-check: build
+	GOFLAGS= $(GO) run github.com/os-observability/konflux-opentelemetry/tools/fips-check@latest --binary ./_build/otelcol --module ./_build --allowlist ./fips-allowlist.yaml
 
 .PHONY: generate-schemas
 generate-schemas: vendor
